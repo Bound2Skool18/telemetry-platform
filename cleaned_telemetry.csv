@@ -1,0 +1,2 @@
+id,engine_rpm,equipment_id,fuel_level,latitude,longitude,soil_moisture,timestamp
+1,2100.0,tractor123,75.0,41.123,-90.456,23.5,1720094400000

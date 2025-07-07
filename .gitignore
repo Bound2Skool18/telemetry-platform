@@ -1,0 +1,13 @@
+# Java (backend)
+/target/
+*.class
+*.jar
+*.db
+
+# Node (frontend)
+/node_modules/
+/build/
+
+# OS
+.DS_Store
+*.log
