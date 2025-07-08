@@ -15,7 +15,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './App.css';
 
-// Fix Leaflet icon issues
+// Fix Leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -30,8 +30,8 @@ function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
 
-  // Form state
   const [form, setForm] = useState({
     equipmentId: '',
     timestamp: '',
@@ -41,15 +41,15 @@ function App() {
     fuelLevel: '',
     soilMoisture: ''
   });
-  const [submitError, setSubmitError] = useState(null);
 
-  // Base URL for API
-  const API_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8080';
+  // Use REACT_APP_API_URL in production, fallback to localhost in dev
+  const API_BASE = process.env.NODE_ENV === 'production'
+    ? process.env.REACT_APP_API_URL
+    : 'http://localhost:8080';
 
-  // Fetch telemetry data
   const fetchTelemetry = () => {
     setLoading(true);
-    fetch(`${API_BASE}/api/v1/telemetry`)
+    fetch('/api/v1/telemetry')
       .then(res => res.json())
       .then(d => { setData(d); setError(null); })
       .catch(() => setError('Failed to load telemetry data.'))
@@ -58,18 +58,16 @@ function App() {
 
   useEffect(fetchTelemetry, [API_BASE]);
 
-  // Handle form input change
   const handleChange = e => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm(f => ({ ...f, [name]: value }));
   };
 
-  // Handle form submission
   const handleSubmit = e => {
     e.preventDefault();
     setSubmitError(null);
 
-    // Client-side validation: ensure valid ranges
+    // client‐side validation
     const { fuelLevel, engineRpm } = form;
     if (fuelLevel < 0 || fuelLevel > 100 || engineRpm < 0) {
       setSubmitError('Please enter valid ranges: fuel 0–100, RPM ≥ 0.');
@@ -78,7 +76,7 @@ function App() {
 
     const payload = {
       equipmentId: form.equipmentId,
-      timestamp: new Date(form.timestamp).toISOString(),  // convert to ISO-8601
+      timestamp: new Date(form.timestamp).toISOString(),
       latitude: parseFloat(form.latitude),
       longitude: parseFloat(form.longitude),
       engineRpm: parseInt(form.engineRpm, 10),
@@ -86,23 +84,36 @@ function App() {
       soilMoisture: parseFloat(form.soilMoisture)
     };
 
-    fetch(`${API_BASE}/api/v1/telemetry`, {
+    fetch('/api/v1/telemetry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-      .then(res => {
-        if (!res.ok) throw new Error('Submit failed');
+      .then(async res => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
         return res.json();
       })
       .then(() => {
-        setForm({ equipmentId: '', timestamp: '', latitude: '', longitude: '', engineRpm: '', fuelLevel: '', soilMoisture: '' });
+        setForm({
+          equipmentId: '',
+          timestamp: '',
+          latitude: '',
+          longitude: '',
+          engineRpm: '',
+          fuelLevel: '',
+          soilMoisture: ''
+        });
         fetchTelemetry();
       })
-      .catch(() => setSubmitError('Failed to submit telemetry.'));
+      .catch(err => {
+        console.error('Submit error:', err);
+        setSubmitError(`Submission error: ${err.message}`);
+      });
   };
 
-  // Prepare chart data
   const chartData = {
     labels: data.map(d => new Date(d.timestamp).toLocaleTimeString()),
     datasets: [{
@@ -114,16 +125,16 @@ function App() {
   };
 
   if (loading) return <div className="container">Loading telemetry data...</div>;
-  if (error) return <div className="container error">{error}</div>;
+  if (error)   return <div className="container error">{error}</div>;
 
   return (
     <div className="container">
       <h1>Telemetry Dashboard</h1>
 
-      {/* Upload Form */}
       <form className="upload-form" onSubmit={handleSubmit}>
         <h2>Upload Telemetry Data</h2>
         {submitError && <div className="error">{submitError}</div>}
+
         <div className="form-grid">
           {/* Equipment ID */}
           <div className="form-group">
@@ -138,7 +149,6 @@ function App() {
               required
             />
           </div>
-
           {/* Timestamp */}
           <div className="form-group">
             <label htmlFor="timestamp">Timestamp</label>
@@ -146,13 +156,11 @@ function App() {
               id="timestamp"
               name="timestamp"
               type="datetime-local"
-              placeholder="2024-07-04T12:00"
               value={form.timestamp}
               onChange={handleChange}
               required
             />
           </div>
-
           {/* Latitude */}
           <div className="form-group">
             <label htmlFor="latitude">Latitude</label>
@@ -169,7 +177,6 @@ function App() {
               required
             />
           </div>
-
           {/* Longitude */}
           <div className="form-group">
             <label htmlFor="longitude">Longitude</label>
@@ -186,7 +193,6 @@ function App() {
               required
             />
           </div>
-
           {/* Engine RPM */}
           <div className="form-group">
             <label htmlFor="engineRpm">Engine RPM</label>
@@ -202,8 +208,7 @@ function App() {
               required
             />
           </div>
-
-          {/* Fuel Level (%) */}
+          {/* Fuel Level */}
           <div className="form-group">
             <label htmlFor="fuelLevel">Fuel Level (%)</label>
             <input
@@ -219,8 +224,7 @@ function App() {
               required
             />
           </div>
-
-          {/* Soil Moisture (%) */}
+          {/* Soil Moisture */}
           <div className="form-group">
             <label htmlFor="soilMoisture">Soil Moisture (%)</label>
             <input
@@ -235,15 +239,20 @@ function App() {
             />
           </div>
         </div>
+
         <button type="submit">Submit</button>
       </form>
 
-      {/* Data Table */}
       <div className="table">
         <table>
           <thead>
             <tr>
-              <th>ID</th><th>Equipment</th><th>Timestamp</th><th>Latitude</th><th>Longitude</th><th>RPM</th>
+              <th>ID</th>
+              <th>Equipment</th>
+              <th>Timestamp</th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>RPM</th>
             </tr>
           </thead>
           <tbody>
@@ -261,14 +270,16 @@ function App() {
         </table>
       </div>
 
-      {/* Chart */}
       <div className="chart">
         <Line data={chartData} />
       </div>
 
-      {/* Map */}
       <div className="map" style={{ height: '400px', marginTop: '1rem' }}>
-        <MapContainer center={[data[0]?.latitude || 0, data[0]?.longitude || 0]} zoom={13} style={{ height: '100%' }}>
+        <MapContainer
+          center={[data[0]?.latitude || 0, data[0]?.longitude || 0]}
+          zoom={13}
+          style={{ height: '100%' }}
+        >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           {data.map(d => (
             <Marker position={[d.latitude, d.longitude]} key={d.id}>
