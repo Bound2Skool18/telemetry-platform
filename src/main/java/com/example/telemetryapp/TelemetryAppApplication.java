@@ -9,3 +9,6 @@ public class TelemetryAppApplication {
         SpringApplication.run(TelemetryAppApplication.class, args);
     }
 }
+
+
+// git remote add origin https://github.com/Bound2Skool18/telemetry-platform.git
