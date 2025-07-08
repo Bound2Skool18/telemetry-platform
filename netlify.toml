@@ -1,0 +1,13 @@
+# netlify.toml
+
+[build]
+  base    = "telemetry-dashboard"
+  command = "npm install && npm run build"
+  publish = "telemetry-dashboard/build"
+
+# Proxy any /api/* call to your Railway backend
+[[redirects]]
+  from       = "/api/*"
+  to         = "https://parallel-middle-production.up.railway.app/api/:splat"
+  status     = 200
+  force      = true
