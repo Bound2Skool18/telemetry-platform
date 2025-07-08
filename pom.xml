@@ -44,6 +44,11 @@
 			<artifactId>sqlite-jdbc</artifactId>
 			<version>3.39.2.0</version>
 		</dependency>
+
+		<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
 		<!-- Hibernate dialect for SQLite -->
 
 		<dependency>
@@ -55,6 +60,11 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
 	</dependencies>
 
 	<build>
